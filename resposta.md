@@ -15,7 +15,7 @@ Wilian Pereira da Silva
 08/09/2026
 
 **Link do repositório:**  
-Preencha aqui
+[Github: Dio AWS Wiki Project](https://github.com/willsilva96/dio_aws_wiki_project)
 
 ---
 
@@ -36,7 +36,7 @@ Exemplo de como responder, com o formato e o que ele implica:
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+ Criei um script utils.py o qual possui uma função que irá retornar um dicionario para os arquivos presentes na pasta com seus atributos (Path, Name e Type), posteriormente cada tipo poderá ser processado de uma maneira. 
 ```
 
 ---
@@ -57,7 +57,7 @@ Exemplo:
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Nomenclatura despadronizada gera um desafio para tornar os dados estruturados ao longo do tempo, considerando que reunioes tem um fator determinamente sobre os dados e decisões tomadas nela, que é o tempo. Documentos de baixa qualidade geram o desafio de definir um indicador de precisão minima na coleta para consideração, assim como escrita problematica. Os diferentes formatos geram o desafio em criar pipelines apartados para tratamento separado definido pelo tipo do arquivo.
 ```
 
 ---
@@ -69,7 +69,18 @@ Liste quais informações precisam ser identificadas para transformar os documen
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Data e Hora da Reunião 
+Responsavel
+Itens adicionais de classificação da reunião
+Participantes - Nome
+Participantes - Função
+Participantes - Papel na reunião
+Objetivos e Pauta
+Indicadores tratados na reunião (nomes e valores)
+Comentarios Gerais durante a reunião
+Planos de ação e itens para acompanhamento estabelecidos na reunião
+Riscos e Oportunidades
+Comentarios Finais
 ```
 
 ---
@@ -81,7 +92,7 @@ Como você classificaria os documentos sem depender de subpastas dentro de `raw/
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Os classificaria por tipo do arquivo, arquivos csv são mais simples de realizar o tratamento pois possuem uma estrutra de colunas e linhas determinadas. Para os arquivos de imagem ou documentos (como pdf), irei trata-los em um pipeline partado para itentificação de elementos importantes.
 ```
 
 ---

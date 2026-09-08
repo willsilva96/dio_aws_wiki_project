@@ -1,0 +1,116 @@
+import os
+import boto3
+from botocore.exceptions import NoCredentialsError, ClientError
+from typing import Any, Callable, Literal, Optional, Sequence
+
+from dotenv import load_dotenv
+load_dotenv()
+
+ConnectionMode = Literal["local","bedrock","production"]
+
+def require_env_var(var_name: str) -> str:
+    val = os.getenv(var_name)
+    if val is None or not val.strip():
+        raise ValueError(
+            f"[CONFIG ERRO] The required environment variable {var_name} was not found or is empty"
+        )
+
+    return val.strip()
+
+def get_agent(
+        mode: ConnectionMode = "local",
+        tools: Optional[Sequence[Callable[...,Any]]] = None,
+        system_prompt: Optional[str] = None,
+        **kwargs: Any,
+) -> Any:
+
+    if mode == "local":
+        from strands.models.ollama import OllamaModel
+
+        host_str = require_env_var("OLLAMA_HOST").strip("/")
+        model_str = require_env_var("OLLAMA_MODEL_CODER")
+
+        model_instance = OllamaModel(
+            host=host_str,
+            model_id=model_str,
+            temperature=0.1,
+        )
+
+        if not system_prompt:
+            system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands"
+
+    elif mode == "bedrock":
+        from strands.models.bedrock import BedrockModel
+
+        model_str = require_env_var("BEDROCK_MODEL_DEFAULT")
+        require_env_var("AWS_DEFAULT_REGION")
+
+        model_instance = BedrockModel(model_id=model_str)
+
+        if not system_prompt:
+            system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands, rodando na AWS"
+
+    else:
+        raise ValueError(f"Modo de conexão '{mode}' inválido ou não suportado")
+
+    from strands import Agent 
+
+    return Agent(
+        model=model_instance,
+        tools=list(tools) if tools else [],
+        system_prompt=system_prompt,
+        **kwargs,
+    )
+
+
+def get_s3_connection(
+        mode: ConnectionMode = "local"
+):
+    try:
+        region_name = require_env_var("AWS_DEFAULT_REGION")
+        endpoint = require_env_var("AWS_FLOCI_ENDPOINT")
+        aws_access_key_id = require_env_var("AWS_FLOCI_KEY_ID")
+        aws_secret_access_key = require_env_var("AWS_SECRET_ACCESS_KEY")
+
+        if mode == "local":
+            print(f"[INFO] Connecting to the LOCAL/FLOCI environment")
+
+            s3_client = boto3.client(
+                "s3",
+                region_name=region_name,
+                endpoint_url=endpoint,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+            )
+        elif mode == "production":
+            print("[INFO] Connecting to the AWS Production environment")
+
+            s3_client = boto3.client(
+                region_name=region_name
+            )
+        else:
+            raise ValueError(f"Valid environment '{mode}'! Use 'local' or 'production'.")
+
+        return s3_client
+
+    except Exception as e:
+        print(f"[ERROR] Failed to connect to S3 ({mode}): {e}")
+
+    
+if __name__ == "__main__":
+    s3 = get_s3_connection(mode="local")
+
+    if s3:
+            try:
+                resposta = s3.list_buckets()
+                print("\n--- Lista de Buckets ---")
+                buckets = resposta.get('Buckets', [])
+                if not buckets:
+                    print("Nenhum bucket encontrado.")
+                for b in buckets:
+                    print(f"-> {b['Name']}")
+            except ClientError as err:
+                print(f"[ERRO AWS/Floci]: {err}")
+            except Exception as err:
+                print(f"[ERRO Inesperado]: {err}")
+
