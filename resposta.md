@@ -114,7 +114,7 @@ Serviços que você pode considerar:
 **Sua resposta:**
 
 ```md
-Considerei o S3 para armazenamento dos arquivos, e o IAM para gestão das chaves de acesso e segurança para gestão do Bucket forma segura em connections.py
+Considerei o S3 para armazenamento dos arquivos, e o IAM para gestão das chaves de acesso e segurança para gestão do Bucket forma segura em connections.py. E KNS para criptografica dos arquivos.
 ```
 
 ---
@@ -126,7 +126,7 @@ Explique como garantir que os arquivos originais sejam mantidos intactos e rastr
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+No script create_bucket em utils.py inclui uma variavel por padrão definida como True para enable_object_lock, dessa forma de o S3 irá aplicar regras de retenção para os arquivos carregados e eles não poderam ser apagados ou modificados.
 ```
 
 ---
@@ -353,15 +353,15 @@ Preencha aqui.
 
 | Serviço AWS | Papel na solução |
 |---|---|
-| Amazon S3 | Preencha aqui |
-| Amazon Textract | Preencha aqui |
+| Amazon S3 | Amazenamento, imutabilidade dos arquivos |
+| Amazon Textract | Leitura os arquivos Digitalizados e PDF's |
 | Amazon Bedrock | Preencha aqui |
 | Amazon Bedrock Knowledge Bases | Preencha aqui |
 | AWS Lambda | Preencha aqui |
 | AWS Step Functions | Preencha aqui |
 | Amazon CloudWatch | Preencha aqui |
-| AWS IAM | Preencha aqui |
-| AWS KMS | Preencha aqui |
+| AWS IAM | Credenciais seguras para manipulação do ambiente AWS|
+| AWS KMS | Segurança e criptografica para upload e leitura de arquivos |
 
 Adicione, remova ou ajuste os serviços conforme sua proposta.
 

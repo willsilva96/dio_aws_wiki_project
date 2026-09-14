@@ -1,21 +1,11 @@
-import os
+import io
+import csv
 from pathlib import Path
 from botocore.exceptions import ClientError
 from typing import Optional
-from dotenv import load_dotenv
-
-load_dotenv()
+from datetime import datetime, timedelta, timezone
 
 DIR = Path(__file__).resolve().parent.parent
-
-def require_env_var(var_name: str) -> str:
-    val = os.getenv(var_name)
-    if val is None or not val.strip():
-        raise ValueError(
-            f"[CONFIG ERRO] The required environment variable {var_name} was not found or is empty"
-        )
-
-    return val.strip()
 
 # Primeiro obtenho os atributos dos arquivos presentes na pasta raw
 def get_document():
@@ -44,9 +34,26 @@ def get_document_bytes(file_name: str) -> bytearray:
 
     return doc_bytes
 
-# Cria um bucket do S#
-def create_bucket(aws_s3_connection, bucket_name: str):
-    aws_s3_connection.create_bucket(Bucket=bucket_name)
+# Cria um bucket do S3
+def create_bucket(
+        aws_s3_connection, 
+        bucket_name: str,
+        enable_object_lock: bool = True
+        ):
+
+    params = {"Bucket": bucket_name}
+
+    if enable_object_lock:
+        aws_s3_connection.create_bucket(
+            Bucket=bucket_name,
+            ObjectLockEnabledForBucket=True
+        )
+
+    elif:
+        aws_s3_connection.create_bucket(
+            Bucket=bucket_name
+        )
+    
     print(f"Bucket '{bucket_name}' sucessfully created")
 
 # Gestão de buckets
@@ -95,16 +102,107 @@ def upload_documents_kms(
         print(f"[Error] Fail to send file: {e}")
         return False
 
-
+# Extrair texto de imagem com textract
 def extract_text_textract(textract_client, bucket_name: str, s3_key: str) -> str:
     try:
         response = textract_client.detect_document_text(
-            Document={"S30bject": {"Bucket": bucket_name, "Name": s3_key}}
+            Document={"S3Object": {"Bucket": bucket_name, "Name": s3_key}}
         )
-        lines = [item["Text"] for item in response["Blocks"] if item["BlocksType"] == "LINE"]
+        lines = [item["Text"] for item in response["Blocks"] if item["BlockType"] == "LINE"]
 
         return "\n".join(lines)
 
     except ClientError as e:
         print(f"[Error Textract]: {e}")
         return ""
+
+# Aplica modo de retenção para arquivos
+def appl_object_immutability(
+        aws_s3_connection,
+        bucket_name: str,
+        s3_key: str,
+        retention_days: int = 365,
+        mode: str = "COMPLIANCE"
+) -> bool:
+
+    expiration_date = datetime.now(timezone.utc) + timedelta(days=retention_days)
+
+    try:
+        aws_s3_connection.put_objetct_retention(
+            Bucket=bucket_name,
+            Key=s3_key,
+            Retention={
+                "Mode": mode,
+                "RetatinUntilDate": expiration_date
+            }
+        )
+
+        print(f"[IMMUTABILITY] File protected against deletion util {expiration_date}, Mode: {mode}")
+
+    except Exception as e:
+        print(f"[IMMUTABILITY WARNING] Objetct Lock could not be applied to...")
+
+# Cols csv files
+def format_cols_csv(col: str) -> str:
+    return col.replace("_"," ").replace("-", " ").strip().title()
+
+# Create Markdown
+def csv_to_markdown(
+        content_csv_bytes: bytes,
+        title_document: Optional[str] = None,
+        col_name: Optional[str] = None
+) -> str:
+    text_csv = content_csv_bytes.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text_csv))
+
+    if not reader.fieldnames:
+        return ""
+
+    field_id = col_name if col_name else reader.fieldnames[0]
+
+    lines_markdown = []
+    if title_document:
+        lines_markdown.append(f"# {title_document}\n")
+
+    for index, line in enumerate(reader, start=1):
+        value_id = line.get(field_id, f"registre {index}")
+        lines_markdown.append(f"### {format_cols_csv(field_id)}:{value_id}")
+
+        for col, value in line.items():
+            if col == value_id:
+                continue
+
+            value_str = str(value).strip() if value is not None else ""
+
+            if value_str:
+                name_format = format_cols_csv(col)
+                lines_markdown.append(f"- **{name_format}:** {value_str}")
+
+        lines_markdown.append("")
+
+    return "\n".join(lines_markdown)
+                
+# Salvar arquivo csv com AWS Lambda
+def file_csv_lambda(
+        aws_s3_connection,
+        bucket: str,
+        s3_key: str,
+        bucket_destination: str,
+        s3_key_destionation: str
+) -> bool:
+
+    try:
+        print(f"[LAMBDA] read {s3_key} from bucket {bucket}...")
+
+        object_file = aws_s3_connection.get_objetct(Bucket=bucket, Key=s3_key)
+        bytes_file = object_file["Body"].read()
+
+        markdown = csv_to_markdown(bytes_file)
+
+        aws_s3_connection.put_object(
+            Bucket=bucket_destination,
+            Key=s3_key_destionation,
+            Body=markdown,
+            ContentType="text/markdown"
+        )
+

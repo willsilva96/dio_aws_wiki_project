@@ -1,9 +1,17 @@
 import boto3
 from typing import Any, Callable, Literal, Optional, Sequence
-from utils import require_env_var
 
 from dotenv import load_dotenv
 load_dotenv()
+
+def require_env_var(var_name: str) -> str:
+    val = os.getenv(var_name)
+    if val is None or not val.strip():
+        raise ValueError(
+            f"[CONFIG ERRO] The required environment variable {var_name} was not found or is empty"
+        )
+
+    return val.strip()
 
 ConnectionMode = Literal["local","production"]
 
@@ -29,7 +37,7 @@ def get_agent(
         if not system_prompt:
             system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands"
 
-    elif mode == "producation":
+    elif mode == "production":
         from strands.models.bedrock import BedrockModel
 
         model_str = require_env_var("BEDROCK_MODEL_DEFAULT")
