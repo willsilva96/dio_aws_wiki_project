@@ -1,21 +1,11 @@
-import os
 import boto3
-from botocore.exceptions import NoCredentialsError, ClientError
 from typing import Any, Callable, Literal, Optional, Sequence
+from utils import require_env_var
 
 from dotenv import load_dotenv
 load_dotenv()
 
-ConnectionMode = Literal["local","bedrock","production"]
-
-def require_env_var(var_name: str) -> str:
-    val = os.getenv(var_name)
-    if val is None or not val.strip():
-        raise ValueError(
-            f"[CONFIG ERRO] The required environment variable {var_name} was not found or is empty"
-        )
-
-    return val.strip()
+ConnectionMode = Literal["local","production"]
 
 def get_agent(
         mode: ConnectionMode = "local",
@@ -39,7 +29,7 @@ def get_agent(
         if not system_prompt:
             system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands"
 
-    elif mode == "bedrock":
+    elif mode == "producation":
         from strands.models.bedrock import BedrockModel
 
         model_str = require_env_var("BEDROCK_MODEL_DEFAULT")
@@ -62,31 +52,42 @@ def get_agent(
         **kwargs,
     )
 
-
 def get_s3_connection(
-        mode: ConnectionMode = "local"
-):
+        mode: ConnectionMode = "local",
+        service = None
+):  
     try:
         region_name = require_env_var("AWS_DEFAULT_REGION")
-        endpoint = require_env_var("AWS_FLOCI_ENDPOINT")
-        aws_access_key_id = require_env_var("AWS_FLOCI_KEY_ID")
+
+        endpoint_floci = require_env_var("AWS_FLOCI_ENDPOINT")
+        aws_access_key_id_floci = require_env_var("AWS_FLOCI_KEY_ID")
+        aws_secret_access_key_floci = require_env_var("AWS_FLOCI_SECRET_ACCESS_KEY")
+
+        aws_access_key_id = require_env_var("AWS_KEY_ID")
         aws_secret_access_key = require_env_var("AWS_SECRET_ACCESS_KEY")
+
+        if service is None:
+            return []
 
         if mode == "local":
             print(f"[INFO] Connecting to the LOCAL/FLOCI environment")
 
             s3_client = boto3.client(
-                "s3",
+                service_name=service,
                 region_name=region_name,
-                endpoint_url=endpoint,
-                aws_access_key_id=aws_access_key_id,
-                aws_secret_access_key=aws_secret_access_key
+                endpoint_url=endpoint_floci,
+                aws_access_key_id=aws_access_key_id_floci,
+                aws_secret_access_key=aws_secret_access_key_floci
             )
         elif mode == "production":
             print("[INFO] Connecting to the AWS Production environment")
 
             s3_client = boto3.client(
-                region_name=region_name
+                region_name=region_name,
+                service_name=service,
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key
+
             )
         else:
             raise ValueError(f"Valid environment '{mode}'! Use 'local' or 'production'.")
@@ -94,23 +95,4 @@ def get_s3_connection(
         return s3_client
 
     except Exception as e:
-        print(f"[ERROR] Failed to connect to S3 ({mode}): {e}")
-
-    
-if __name__ == "__main__":
-    s3 = get_s3_connection(mode="local")
-
-    if s3:
-            try:
-                resposta = s3.list_buckets()
-                print("\n--- Lista de Buckets ---")
-                buckets = resposta.get('Buckets', [])
-                if not buckets:
-                    print("Nenhum bucket encontrado.")
-                for b in buckets:
-                    print(f"-> {b['Name']}")
-            except ClientError as err:
-                print(f"[ERRO AWS/Floci]: {err}")
-            except Exception as err:
-                print(f"[ERRO Inesperado]: {err}")
-
+        print(f"[ERROR] Failed to connect to {service} in ({mode}): {e}")

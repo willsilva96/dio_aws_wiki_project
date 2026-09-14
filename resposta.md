@@ -114,7 +114,7 @@ Serviços que você pode considerar:
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Considerei o S3 para armazenamento dos arquivos, e o IAM para gestão das chaves de acesso e segurança para gestão do Bucket forma segura em connections.py
 ```
 
 ---
