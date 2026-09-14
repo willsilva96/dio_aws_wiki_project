@@ -53,8 +53,6 @@ def create_bucket(
         enable_object_lock: bool = True
         ):
 
-    params = {"Bucket": bucket_name}
-
     if enable_object_lock:
         aws_s3_connection.create_bucket(
             Bucket=bucket_name,
@@ -69,14 +67,14 @@ def create_bucket(
     print(f"Bucket '{bucket_name}' sucessfully created")
 
 # Gestão de buckets
-def management_bucket(bucket_name: str, mode=None):
-    from connections import get_s3_connection
+def management_bucket(
+        aws_s3_connection,
+        bucket_name: str, 
+        mode=None):
 
     if mode is None:
         return []
     
-    aws_s3_connection = get_s3_connection(mode=mode,service="s3")
-
     try:
         aws_s3_connection.head_bucket(Bucket=bucket_name)
         print(f"Bucket '{bucket_name}' it already exists")
@@ -93,7 +91,8 @@ def upload_documents_kms(
         file_path: str,
         bucket_name: str,
         s3_key: str,
-        kms_key_id: Optional[str] = None
+        kms_key_id: Optional[str] = None,
+        mode=None,
 ) -> bool:
 
     extra_args = {"ServerSideEncryption": "aws:kms"}
@@ -106,7 +105,7 @@ def upload_documents_kms(
         Bucket=bucket_name,
         Key=s3_key,
         ExtraArgs=extra_args
-    )
+        )
         print(f"[Sucess] file upload with KMS, on bucket '{bucket_name}'")
         return True
 
@@ -200,23 +199,32 @@ def file_csv_lambda(
         bucket: str,
         s3_key: str,
         bucket_destination: str,
-        s3_key_destionation: str
+        s3_key_destionation: str,
+        mode = None
 ) -> bool:
 
     try:
         print(f"[LAMBDA] read {s3_key} from bucket {bucket}...")
 
-        object_file = aws_s3_connection.get_objetct(Bucket=bucket, Key=s3_key)
+        object_file = aws_s3_connection.get_object(Bucket=bucket, Key=s3_key)
         bytes_file = object_file["Body"].read()
 
         markdown = csv_to_markdown(bytes_file)
 
+        management_bucket(
+            aws_s3_connection=aws_s3_connection,
+            bucket_name=bucket_destination,
+            mode=mode)
+        
         aws_s3_connection.put_object(
             Bucket=bucket_destination,
             Key=s3_key_destionation,
             Body=markdown,
             ContentType="text/markdown"
         )
+
+        print(f"[SUCESSO] Markdown saved on: s3://{bucket_destination}/{s3_key_destionation}")
+        return True
 
     except ClientError as e:
             print(f"[ERROR]: {e}")

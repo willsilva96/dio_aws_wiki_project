@@ -1,11 +1,16 @@
-from utils import  management_bucket,get_document, upload_documents_kms,require_env_var
+from utils import management_bucket,get_document, upload_documents_kms,require_env_var, file_csv_lambda
+from connections import get_s3_connection
 
 if __name__ == "__main__":
-    BUCKET_NAME = "dio_project_wiki"
+    BUCKET_NAME = "dio_project_wiki_raw_data"
     MODO = "local"
     KMS_ARN = require_env_var("AWS_KMS_KEY_ARN")
+    BUCKET_FILE_PROCESS = "dio_project_wiki_raw_processed"
+    KMS_ARN_FILE_PROCESS = require_env_var("AWS_KMS_KEY_ARN_PROCESS")
 
-    s3 = management_bucket(BUCKET_NAME, mode=MODO)
+    s3 = get_s3_connection(
+        service="s3", 
+        mode=MODO)
 
     if s3:
         documents = get_document()
@@ -24,7 +29,8 @@ if __name__ == "__main__":
                 file_path=file_path,
                 bucket_name=BUCKET_NAME,
                 s3_key=s3_key,
-                kms_key_id=KMS_ARN
+                kms_key_id=KMS_ARN,
+                mode=MODO
             )
 
             if upload_ok:
@@ -34,8 +40,23 @@ if __name__ == "__main__":
                 elif file_type == ".pdf":
                     print(f"-> Hibrid Rote: PDF detect: {file_name}. Try read with PyPDF. Fail try -> Textract")
 
+                # Processamento para arquivos CSV, valida bucket bruto e trata dados e envia para um bucket os dados processado em um Markdown
                 elif file_type == ".csv":
                     print(f"-> Tabular Rote: CSV file: {file_name}")
+
+                    s3_key_md = f"processed/{file_name.replace(".csv",".md")}"
+
+                    file_csv_lambda(
+                        aws_s3_connection=s3,
+                        bucket=BUCKET_NAME,
+                        s3_key=s3_key,
+                        bucket_destination=BUCKET_FILE_PROCESS,
+                        s3_key_destionation=s3_key_md,
+                        mode=MODO
+                    )
+
+                    
+
 
 
                     
