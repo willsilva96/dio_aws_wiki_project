@@ -1,4 +1,4 @@
-from utils import require_env_var, management_bucket,get_document, upload_documents_kms
+from utils import  management_bucket,get_document, upload_documents_kms,require_env_var
 
 if __name__ == "__main__":
     BUCKET_NAME = "dio_project_wiki"

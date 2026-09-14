@@ -1,11 +1,23 @@
 import io
+import os
 import csv
 from pathlib import Path
 from botocore.exceptions import ClientError
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+from dotenv import load_dotenv
+load_dotenv()
 
 DIR = Path(__file__).resolve().parent.parent
+
+def require_env_var(var_name: str) -> str:
+    val = os.getenv(var_name)
+    if val is None or not val.strip():
+        raise ValueError(
+            f"[CONFIG ERRO] The required environment variable {var_name} was not found or is empty"
+        )
+
+    return val.strip()
 
 # Primeiro obtenho os atributos dos arquivos presentes na pasta raw
 def get_document():
@@ -49,7 +61,7 @@ def create_bucket(
             ObjectLockEnabledForBucket=True
         )
 
-    elif:
+    else:
         aws_s3_connection.create_bucket(
             Bucket=bucket_name
         )
@@ -205,4 +217,8 @@ def file_csv_lambda(
             Body=markdown,
             ContentType="text/markdown"
         )
+
+    except ClientError as e:
+            print(f"[ERROR]: {e}")
+            return False
 
