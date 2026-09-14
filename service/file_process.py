@@ -34,7 +34,7 @@ if __name__ == "__main__":
             )
 
             if upload_ok:
-                if file_type in [".csv",".pdf",".txt",".md"]:
+                if file_type in [".csv",".pdf",".txt",".md",".png",".jpg",".jpeg"]:
                     s3_key_md = f"processed/{file_name.rsplit(".", 1)[0]}.md"
 
                     file_to_lambda(

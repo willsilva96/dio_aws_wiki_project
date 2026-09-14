@@ -212,6 +212,26 @@ def pdf_to_markdown(
 
     return "\n".join(lines_markdrown)
 
+# Processa textract para markdown
+def process_textract_to_markdown(
+        textract_client,
+        bucket: str,
+        s3_key: str
+) -> str:
+    response = textract_client.detect_document_text(
+        Document={"S3Object": {"Bucket": bucket, "Name": s3_key}}
+    )
+
+    lines_markdown = [f"# Transaction OCR: {s3_key.split("/")[-1]}\n"]
+
+    for item in response.get("Blocks",[]):
+        if item.get("BlockType") == "LINE":
+            text_line = item.get("Text", "").strip()
+            if text_line:
+                lines_markdown.append(text_line)
+
+    return "\n\n".join(lines_markdown)
+
                 
 # Salvar arquivo csv com AWS Lambda
 def file_to_lambda(
@@ -245,6 +265,16 @@ def file_to_lambda(
         elif file_type in [".txt", ".md"]:
             markdown_content = bytes_file.decode("utf-8-sig")
 
+        elif file_type in [".png",".jpg",".jpeg"]:
+            from connections import get_s3_connection
+            textract_client = get_s3_connection(mode=mode, service="textract")
+
+            markdown_content = process_textract_to_markdown(
+                textract_client=textract_client,
+                bucket=bucket,
+                s3_key=s3_key
+            )
+
         else:
             print(f"[ERROR] type '{file_type}' is not supported")
         
@@ -266,22 +296,3 @@ def file_to_lambda(
     except ClientError as e:
             print(f"[ERROR]: {e}")
             return False
-
-def process_textract_to_markdown(
-        textract_client,
-        bucket: str,
-        s3_key: str
-) -> str:
-    response = textract_client.detect_document_text(
-        Document={"S3Object": {"Bucket": bucket, "Name": s3_key}}
-    )
-
-    lines_markdown = [f"# Transaction OCR: {s3_key.split("/")[-1]}\n"]
-
-    for item in response.get("Blocks",[]):
-        if item.get("BlockType") == "LINE":
-            text_line = item.get("Text", "").strip()
-            if text_line:
-                lines_markdown.append(text_line)
-
-    return "\n\n".join(lines_markdown)
