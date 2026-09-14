@@ -266,3 +266,22 @@ def file_to_lambda(
     except ClientError as e:
             print(f"[ERROR]: {e}")
             return False
+
+def process_textract_to_markdown(
+        textract_client,
+        bucket: str,
+        s3_key: str
+) -> str:
+    response = textract_client.detect_document_text(
+        Document={"S3Object": {"Bucket": bucket, "Name": s3_key}}
+    )
+
+    lines_markdown = [f"# Transaction OCR: {s3_key.split("/")[-1]}\n"]
+
+    for item in response.get("Blocks",[]):
+        if item.get("BlockType") == "LINE":
+            text_line = item.get("Text", "").strip()
+            if text_line:
+                lines_markdown.append(text_line)
+
+    return "\n\n".join(lines_markdown)
