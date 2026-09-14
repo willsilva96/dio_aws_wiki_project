@@ -96,7 +96,7 @@ def upload_documents_kms(
         bucket_name: str,
         s3_key: str,
         kms_key_id: Optional[str] = None,
-        mode=None,
+        trace_id: Optional[str] = None
 ) -> bool:
 
     extra_args = {"ServerSideEncryption": "aws:kms"}
@@ -110,7 +110,14 @@ def upload_documents_kms(
         Key=s3_key,
         ExtraArgs=extra_args
         )
-        print(f"[Sucess] file upload with KMS, on bucket '{bucket_name}'")
+        log.info(
+            f"File upload on S3 with KMS, on bucket '{bucket_name}'",
+            extra={
+                "trace_id": trace_id,
+                "service": "S3",
+                "status": "SUCESS",
+                "document": f"{s3_key} for S3 Bucket: {bucket_name}"
+            })
         return True
 
     except ClientError as e:
@@ -132,7 +139,7 @@ def extract_text_textract(textract_client, bucket_name: str, s3_key: str) -> str
         return ""
 
 # Aplica modo de retenção para arquivos
-def appl_object_immutability(
+def apply_object_immutability(
         aws_s3_connection,
         bucket_name: str,
         s3_key: str,
@@ -244,16 +251,17 @@ def file_to_lambda(
         bucket_destination: str,
         s3_key_destionation: str,
         file_type: str,
-        mode = None
+        mode = None,
+        trace_id: Optional[str] = None
 ) -> bool:
     from connections import get_s3_connection
     textract_client = get_s3_connection(mode=mode, service="textract")
-
     
     try:
         log.info(
             f"Read {s3_key} from bucket {bucket}",
             extra={
+                "trace_id": trace_id,
                 "service": "Lambda",
                 "status": "Info",
                 "document": f"{s3_key}, from {bucket}"
@@ -274,6 +282,7 @@ def file_to_lambda(
                 log.info(
                     "PDF does not contais readable text. Send to Textract...",
                     extra={
+                        "trace_id": trace_id,
                         "service": "Textract",
                         "status": "OCR_REQUIRED",
                         "document": s3_key
@@ -299,6 +308,7 @@ def file_to_lambda(
             log.info(
                 f"Type '{file_type}' is not supported",
                 extra={
+                "trace_id": trace_id,
                 "service": "Lambda",
                 "status": "FAILED",
                 "document": f"{file_type}, {s3_key}"
@@ -319,6 +329,7 @@ def file_to_lambda(
         log.info(
             f"Markdown saved on: s3://{bucket_destination}/{s3_key_destionation}",
             extra={
+                "trace_id": trace_id,
                 "service": "S3",
                 "status": "SUCESS",
                 "documents": s3_key_destionation
@@ -329,3 +340,20 @@ def file_to_lambda(
     except ClientError as e:
             print(f"[FAILED]: {e}")
             return False
+
+def send_logs_s3(
+        aws_s3_connection,
+        bucket_logs: str,
+        file_logs
+):
+    s3_key_log = f"audit_logs/{datetime.now().strftime("%Y-%m-%d")}/execution.log"
+
+    aws_s3_connection.upload_file(
+        Filename=file_logs,
+        Bucket=bucket_logs,
+        Key=s3_key_log
+    )
+
+    print(f"[AUDIT] Log saved on S3://{bucket_logs}/{s3_key_log}")
+
+    

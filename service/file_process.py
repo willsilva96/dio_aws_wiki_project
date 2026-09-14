@@ -1,8 +1,7 @@
-from utils import get_document, upload_documents_kms,require_env_var, file_to_lambda
+import uuid
+from utils import get_document, upload_documents_kms,require_env_var, file_to_lambda, management_bucket
 from connections import get_s3_connection
 from log import process_logger
-
-log = process_logger()
 
 if __name__ == "__main__":
     BUCKET_NAME = "dio_project_wiki_raw_data"
@@ -10,10 +9,22 @@ if __name__ == "__main__":
     KMS_ARN = require_env_var("AWS_KMS_KEY_ARN")
     BUCKET_FILE_PROCESS = "dio_project_wiki_raw_processed"
     KMS_ARN_FILE_PROCESS = require_env_var("AWS_KMS_KEY_ARN_PROCESS")
+    BUCKET_LOGS=("dio_project_wiki_logs")
 
     s3 = get_s3_connection(
         service="s3", 
         mode=MODO)
+
+    management_bucket(
+        aws_s3_connection=s3,
+        bucket_name=BUCKET_LOGS,
+        mode=MODO
+    )
+
+    log = process_logger(
+        s3_client=s3,
+        bucket_logs=BUCKET_LOGS
+    )
 
     if s3:
         documents = get_document()
@@ -32,9 +43,12 @@ if __name__ == "__main__":
             file_type = doc["type"]
             s3_key = f"raw/{file_name}"
 
+            trace_id = f"trace-{uuid.uuid4().hex[:8]}"
+
             log.info(
                 f"--- Process local files",
                 extra={
+                    "trace_id": trace_id,
                     "service": "LOCAL_SCAN",
                     "level": "INFO",
                     "status": "SUCESS",
@@ -47,7 +61,7 @@ if __name__ == "__main__":
                 bucket_name=BUCKET_NAME,
                 s3_key=s3_key,
                 kms_key_id=KMS_ARN,
-                mode=MODO
+                trace_id=trace_id
             )
 
             if upload_ok:
@@ -61,5 +75,11 @@ if __name__ == "__main__":
                         bucket_destination=BUCKET_FILE_PROCESS,
                         s3_key_destionation=s3_key_md,
                         file_type=file_type,
+                        trace_id=trace_id,
                         mode=MODO
                     )
+
+        for handler in log.handlers:
+            flush_to_s3 = getattr(handler, "flush_to_s3", None)
+            if callable(flush_to_s3):
+                flush_to_s3()
