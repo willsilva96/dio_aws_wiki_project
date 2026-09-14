@@ -155,7 +155,16 @@ Serviços que você pode considerar:
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Separei o processamento por tipo de arquivo e na sequencia os transformando em arquivos markdown em um bucket expecificos. 
+
+Amazon S3 usado para armazemaneto dos dados originais, e para o novo bucket de .md processados
+
+AWS Lambda orquestra o processamento de acordo com o tipo de arquivo, e direciona para o novo bucket
+
+Amazon Textract processa imagems e arquivos pdf com pouco texto detectado pela biblioteca pypdf, buscando retenção de custos desncessarios ao utilizar o Textract .
+
+Arquivos txt e docx apenas transformo em .md e envio para o bucket de arquivos processaods.
+
 ```
 
 ---

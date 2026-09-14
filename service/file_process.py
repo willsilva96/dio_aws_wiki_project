@@ -1,5 +1,8 @@
 from utils import get_document, upload_documents_kms,require_env_var, file_to_lambda
 from connections import get_s3_connection
+from log import process_logger
+
+log = process_logger()
 
 if __name__ == "__main__":
     BUCKET_NAME = "dio_project_wiki_raw_data"
@@ -14,7 +17,14 @@ if __name__ == "__main__":
 
     if s3:
         documents = get_document()
-        print(f"\n[INFO] {len(documents)} enter the raw folder")
+        log.info(
+            f"{len(documents)}. Enter the raw folder",
+            extra={
+                "service": "LOCAL_SCAN",
+                "status": "SUCESS",
+                "document": documents
+
+        })
 
         for doc in documents:
             file_path = doc["path"]
@@ -22,7 +32,14 @@ if __name__ == "__main__":
             file_type = doc["type"]
             s3_key = f"raw/{file_name}"
 
-            print(f"\n --- Process: {file_name} ({file_type})")
+            log.info(
+                f"--- Process local files",
+                extra={
+                    "service": "LOCAL_SCAN",
+                    "level": "INFO",
+                    "status": "SUCESS",
+                    "document": file_name 
+                })
 
             upload_ok = upload_documents_kms(
                 aws_s3_connection=s3,

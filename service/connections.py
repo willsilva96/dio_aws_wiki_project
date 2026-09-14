@@ -1,7 +1,9 @@
 import boto3
 from typing import Any, Callable, Literal, Optional, Sequence
 from utils import require_env_var
+from log import process_logger
 
+log = process_logger()
 
 ConnectionMode = Literal["local","production"]
 
@@ -68,7 +70,14 @@ def get_s3_connection(
             return []
 
         if mode == "local":
-            print(f"[INFO] Connecting to the LOCAL/FLOCI environment")
+            log.info(
+                "Connecting to the LOCAL/FLOCI environment",
+                extra={
+                    "service": "AWS Local (FLOCI)",
+                    "status": "SUCESS",
+                    "documents": f"Region: {region_name}"
+                }
+            )
 
             s3_client = boto3.client(
                 service_name=service,
@@ -78,7 +87,14 @@ def get_s3_connection(
                 aws_secret_access_key=aws_secret_access_key_floci
             )
         elif mode == "production":
-            print("[INFO] Connecting to the AWS Production environment")
+            log.info(
+                "Connecting to the AWS Production environment",
+                extra={
+                    "service":"AWS Production",
+                    "status": "SUCESS",
+                    "document": f"Region: {region_name}"
+
+                })
 
             s3_client = boto3.client(
                 region_name=region_name,
@@ -94,3 +110,4 @@ def get_s3_connection(
 
     except Exception as e:
         print(f"[ERROR] Failed to connect to {service} in ({mode}): {e}")
+        log.info(f"[ERROR] Failed to connect to {service} in ({mode}): {e}")

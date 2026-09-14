@@ -7,7 +7,10 @@ from botocore.exceptions import ClientError
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+from log import process_logger
 load_dotenv()
+
+log = process_logger()
 
 DIR = Path(__file__).resolve().parent.parent
 
@@ -243,10 +246,19 @@ def file_to_lambda(
         file_type: str,
         mode = None
 ) -> bool:
+    from connections import get_s3_connection
+    textract_client = get_s3_connection(mode=mode, service="textract")
 
+    
     try:
-        print(f"[LAMBDA] read {s3_key} from bucket {bucket}...")
-
+        log.info(
+            f"Read {s3_key} from bucket {bucket}",
+            extra={
+                "service": "Lambda",
+                "status": "Info",
+                "document": f"{s3_key}, from {bucket}"
+            })
+        
         object_file = aws_s3_connection.get_object(Bucket=bucket, Key=s3_key)
         bytes_file = object_file["Body"].read()
 
@@ -259,16 +271,24 @@ def file_to_lambda(
             markdown_content = pdf_to_markdown(bytes_file)
 
             if len(markdown_content.strip()) <50:
-                print(f"[ALERT] PDF '{s3_key}' does not contais readable text. Send to Texttract...") ## Voltar aqui
-                return False
+                log.info(
+                    "PDF does not contais readable text. Send to Textract...",
+                    extra={
+                        "service": "Textract",
+                        "status": "OCR_REQUIRED",
+                        "document": s3_key
+                    })
+                process_textract_to_markdown(
+                    textract_client=textract_client,
+                    bucket=bucket,
+                    s3_key=s3_key
+                )
 
-        elif file_type in [".txt", ".md"]:
+        elif file_type in [".txt", ".md",".docx"]:
             markdown_content = bytes_file.decode("utf-8-sig")
 
         elif file_type in [".png",".jpg",".jpeg"]:
-            from connections import get_s3_connection
-            textract_client = get_s3_connection(mode=mode, service="textract")
-
+            
             markdown_content = process_textract_to_markdown(
                 textract_client=textract_client,
                 bucket=bucket,
@@ -276,7 +296,13 @@ def file_to_lambda(
             )
 
         else:
-            print(f"[ERROR] type '{file_type}' is not supported")
+            log.info(
+                f"Type '{file_type}' is not supported",
+                extra={
+                "service": "Lambda",
+                "status": "FAILED",
+                "document": f"{file_type}, {s3_key}"
+                })           
         
         management_bucket(
             aws_s3_connection=aws_s3_connection,
@@ -290,9 +316,16 @@ def file_to_lambda(
             ContentType="text/markdown"
         )
 
-        print(f"[SUCESSO] Markdown saved on: s3://{bucket_destination}/{s3_key_destionation}")
+        log.info(
+            f"Markdown saved on: s3://{bucket_destination}/{s3_key_destionation}",
+            extra={
+                "service": "S3",
+                "status": "SUCESS",
+                "documents": s3_key_destionation
+            })
+        
         return True
 
     except ClientError as e:
-            print(f"[ERROR]: {e}")
+            print(f"[FAILED]: {e}")
             return False
