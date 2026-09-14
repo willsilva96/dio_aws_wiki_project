@@ -1,4 +1,4 @@
-from utils import management_bucket,get_document, upload_documents_kms,require_env_var, file_csv_lambda
+from utils import get_document, upload_documents_kms,require_env_var, file_to_lambda
 from connections import get_s3_connection
 
 if __name__ == "__main__":
@@ -34,29 +34,15 @@ if __name__ == "__main__":
             )
 
             if upload_ok:
-                if file_type in [".png", ".jpg",".jpeg"]:
-                    print(f"-> OCR Rote: Image detect : {file_name}, send Amazon Textract")
+                if file_type in [".csv",".pdf",".txt",".md"]:
+                    s3_key_md = f"processed/{file_name.rsplit(".", 1)[0]}.md"
 
-                elif file_type == ".pdf":
-                    print(f"-> Hibrid Rote: PDF detect: {file_name}. Try read with PyPDF. Fail try -> Textract")
-
-                # Processamento para arquivos CSV, valida bucket bruto e trata dados e envia para um bucket os dados processado em um Markdown
-                elif file_type == ".csv":
-                    print(f"-> Tabular Rote: CSV file: {file_name}")
-
-                    s3_key_md = f"processed/{file_name.replace(".csv",".md")}"
-
-                    file_csv_lambda(
+                    file_to_lambda(
                         aws_s3_connection=s3,
                         bucket=BUCKET_NAME,
                         s3_key=s3_key,
                         bucket_destination=BUCKET_FILE_PROCESS,
                         s3_key_destionation=s3_key_md,
+                        file_type=file_type,
                         mode=MODO
                     )
-
-                    
-
-
-
-                    

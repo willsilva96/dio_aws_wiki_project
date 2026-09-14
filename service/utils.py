@@ -1,6 +1,7 @@
 import io
 import os
 import csv
+from pypdf import PdfReader
 from pathlib import Path
 from botocore.exceptions import ClientError
 from typing import Optional
@@ -192,14 +193,34 @@ def csv_to_markdown(
         lines_markdown.append("")
 
     return "\n".join(lines_markdown)
+
+def pdf_to_markdown(
+        content_pdf_bytes: bytes) -> str:
+
+    reader = PdfReader(io.BytesIO(content_pdf_bytes))
+
+    lines_markdrown = []
+    
+    for index, page in enumerate(reader.pages, start=1):
+        text_page = page.extract_text() or ""
+        text_clean = text_page.strip()
+
+        if text_clean:
+            lines_markdrown.append(f"## Page {index}\n")
+            lines_markdrown.append(text_clean)
+            lines_markdrown.append("\n---\n")
+
+    return "\n".join(lines_markdrown)
+
                 
 # Salvar arquivo csv com AWS Lambda
-def file_csv_lambda(
+def file_to_lambda(
         aws_s3_connection,
         bucket: str,
         s3_key: str,
         bucket_destination: str,
         s3_key_destionation: str,
+        file_type: str,
         mode = None
 ) -> bool:
 
@@ -209,8 +230,24 @@ def file_csv_lambda(
         object_file = aws_s3_connection.get_object(Bucket=bucket, Key=s3_key)
         bytes_file = object_file["Body"].read()
 
-        markdown = csv_to_markdown(bytes_file)
+        markdown_content = ""
 
+        if file_type == ".csv":
+            markdown_content = csv_to_markdown(bytes_file)
+
+        elif file_type == ".pdf":
+            markdown_content = pdf_to_markdown(bytes_file)
+
+            if len(markdown_content.strip()) <50:
+                print(f"[ALERT] PDF '{s3_key}' does not contais readable text. Send to Texttract...") ## Voltar aqui
+                return False
+
+        elif file_type in [".txt", ".md"]:
+            markdown_content = bytes_file.decode("utf-8-sig")
+
+        else:
+            print(f"[ERROR] type '{file_type}' is not supported")
+        
         management_bucket(
             aws_s3_connection=aws_s3_connection,
             bucket_name=bucket_destination,
@@ -219,7 +256,7 @@ def file_csv_lambda(
         aws_s3_connection.put_object(
             Bucket=bucket_destination,
             Key=s3_key_destionation,
-            Body=markdown,
+            Body=markdown_content.encode("utf-8"),
             ContentType="text/markdown"
         )
 
@@ -229,4 +266,3 @@ def file_csv_lambda(
     except ClientError as e:
             print(f"[ERROR]: {e}")
             return False
-
