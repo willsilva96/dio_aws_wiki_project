@@ -11,46 +11,94 @@ def get_agent(
         mode: ConnectionMode = "local",
         tools: Optional[Sequence[Callable[...,Any]]] = None,
         system_prompt: Optional[str] = None,
+        batch_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
         **kwargs: Any,
 ) -> Any:
 
-    if mode == "local":
-        from strands.models.ollama import OllamaModel
+    try:
+        if mode == "local":
+            from strands.models.ollama import OllamaModel
 
-        host_str = require_env_var("OLLAMA_HOST").strip("/")
-        model_str = require_env_var("OLLAMA_MODEL_CODER")
+            host_str = require_env_var("OLLAMA_HOST").strip("/")
+            model_str = require_env_var("OLLAMA_MODEL_CODER")
 
-        model_instance = OllamaModel(
-            host=host_str,
-            model_id=model_str,
-            temperature=0.1,
+            log.info(
+                f"Initializing Strands Agent with Local Ollama",
+                extra={
+                    "batch_id": batch_id,
+                    "trace_id": trace_id,
+                    "service": "Strands/Ollama",
+                    "document": f"Host: {host_str}"
+                }
+            )
+
+            model_instance = OllamaModel(
+                host=host_str,
+                model_id=model_str,
+                temperature=0.1
+            )
+
+            if not system_prompt:
+                system_prompt = "You are an expert in corporate governance and the extraction of metadata from minutes and corporate documents."
+
+        elif mode == "production":
+            from strands.models.bedrock import BedrockModel
+
+            model_str = require_env_var("BEDROCK_MODEL_DEFAULT")
+            require_env_var("AWS_DEFAULT_REGION")
+
+            log.info(
+                f"Initializing Strands Agent with Amazon Bedrok ({model_str})",
+                extra={
+                    "batch_id": batch_id,
+                    "trace_id": trace_id,
+                    "service": "Amazon Bedrock",
+                    "status": "PROCESSING",
+                    "document": f"model: {model_str}"
+            })
+
+            model_instance = BedrockModel(model_id=model_str)
+
+            if not system_prompt:
+                system_prompt = "You are an expert in corporate governance and the extraction of metadata from minutes and corporate documents."
+
+        else:
+            raise ValueError(f"[ERROR] Failed to connect to Service ({mode}): {e}")
+
+        from strands import Agent
+
+        agent = Agent(
+            model=model_instance,
+            tools=list(tools) if tools else [],
+            system_prompt=system_prompt,
+            **kwargs
         )
 
-        if not system_prompt:
-            system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands"
+        log.info(
+            f"Agent with Strands ready for execution ({mode})",
+            extra={
+                "batch_id": batch_id,
+                "trace_id": trace_id,
+                "service": "Strands",
+                "status": "SUCESS",
+                "document": str(type(model_instance).__name__)
+            }
+        )
 
-    elif mode == "production":
-        from strands.models.bedrock import BedrockModel
+        return agent
 
-        model_str = require_env_var("BEDROCK_MODEL_DEFAULT")
-        require_env_var("AWS_DEFAULT_REGION")
-
-        model_instance = BedrockModel(model_id=model_str)
-
-        if not system_prompt:
-            system_prompt = "Você é um especialista em criação de tools e automações com Python e Strands, rodando na AWS"
-
-    else:
-        raise ValueError(f"Modo de conexão '{mode}' inválido ou não suportado")
-
-    from strands import Agent 
-
-    return Agent(
-        model=model_instance,
-        tools=list(tools) if tools else [],
-        system_prompt=system_prompt,
-        **kwargs,
-    )
+    except Exception as e:
+        log.error(
+            f"Fail to initialize Agent ({mode}: {e})",
+            extra={
+                "batch_id": batch_id,
+                "trace_id": trace_id,
+                "service": "Strands",
+                "status": "FAILED"
+            }
+        )
+        raise e
 
 def get_s3_connection(
         mode: ConnectionMode = "local",
