@@ -190,7 +190,7 @@ Explique como os textos extraídos seriam limpos, normalizados e preparados para
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Unificação para markdown, todo arquivo é processado para gerar arquivo .md aramazenado em um bucket intermediario assim procesamento utilizando LLMs para obter dados e enriquecimento fica facilitado devido ao proprio escopo de leitura facilitado desse tipo de arquivo.
 ```
 
 ---
@@ -201,18 +201,16 @@ Defina quais metadados você extrairia de cada documento.
 
 | Metadado | Por que ele é importante? |
 |---|---|
-| Nome do documento | Preencha aqui |
-| Tipo do documento | Preencha aqui |
-| Data identificada | Preencha aqui |
-| Tema principal | Preencha aqui |
-| Participantes | Preencha aqui |
-| Decisões tomadas | Preencha aqui |
-| Responsáveis | Preencha aqui |
-| Próximos passos | Preencha aqui |
-| Nível de confidencialidade | Preencha aqui |
-| Caminho do arquivo original | Preencha aqui |
-
-Adicione outros metadados, se necessário.
+| Nome do documento | Permite rastreabilidade para o arquivo original em todas as camadas de visualização e tratamento |
+| Tipo do documento | Permite tratamento condicional, contingenciado custos utilizando o melhor metodo para cada especificidade|
+| Data identificada | Permite criar evolução temporal das informações facilitando analise|
+| Tema principal | Ajuda a sumarizar os dados visualizado para o assunto, e apoia LLMs no enrequecimento do contexto |
+| Participantes | Ajuda na convernancia e no enrequecimento das informações |
+| Decisões tomadas | Ajuda na rastreabilidade dos resultados futuros, permitindo entender os impactos futuros dos resultados |
+| Responsáveis | Toma ciencia do que foi discutido, apoia na governancia das informações discutidas |
+| Próximos passos | Da mesma forma que as decisões tomadas, mas permite cateogriazação das ações |
+| Nível de confidencialidade | Restringe ou permite a visualização e manutenção das informações de acordo com o estabelecido para a reunião e apoia auditorias futuras e o processamento para repostas da Wiki |
+| Caminho do arquivo original | Rastreabilidade e governancia |
 
 ---
 
@@ -223,7 +221,7 @@ Explique como o Amazon Bedrock poderia ajudar a identificar temas, decisões, re
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Utilização de skills declarativas que pode ser utilizado por modelos no Amazon Bedrock como a Skill de convernancia, o qual possui o fluxo de avaliar os arquivos markdown intermediarios em busca de metadadados definidos para enrequecimento em um json que pode ser facilmente utilizado. 
 ```
 
 ---
@@ -242,7 +240,7 @@ Serviços que você pode considerar:
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Nesse caso foi utilizado o S3 Compaion File, que degera um .json para cada arquivo normalizado. E cada arquivo armazena explicitamente o caminho do arquivo bruto oringal, mantendo a rastrabilidade e mantendo o arquivo fisico original imutavel, formato exigido pelo Amazon Bedrock Knowledge Bases
 ```
 
 ---

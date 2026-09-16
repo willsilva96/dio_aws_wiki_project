@@ -41,7 +41,7 @@ def skill_execute(
     response = agent(user_prompt)
     raw_text = response.message if hasattr(response, "message") else str(response)
 
-    clean_text = raw_text.strip().replace("'''json","").replace("'''","").strip()
+    clean_text = raw_text.strip().replace("```json", "").replace("```", "").replace("'''json", "").replace("'''", "").strip()
 
     try:
         return json.loads(clean_text)

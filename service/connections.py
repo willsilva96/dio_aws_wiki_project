@@ -5,7 +5,7 @@ from log import process_logger
 
 log = process_logger()
 
-ConnectionMode = Literal["local","production"]
+ConnectionMode = Literal["local", "production"]
 
 def get_agent(
         mode: ConnectionMode = "local",
@@ -64,7 +64,7 @@ def get_agent(
                 system_prompt = "You are an expert in corporate governance and the extraction of metadata from minutes and corporate documents."
 
         else:
-            raise ValueError(f"[ERROR] Failed to connect to Service ({mode}): {e}")
+            raise ValueError(f"[ERROR] Modo de conexão '{mode}' inválido ou não suportado.")
 
         from strands import Agent
 
