@@ -176,7 +176,7 @@ Explique como sua solução identificaria e registraria erros de processamento.
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+A cada execução será chamado a função log.pt o qual irá orquestrar um conjuto de itens a serem registrados no padrão Cloud Watch e irá enviar os logs para um bucket do S3 exclusivo para os registros (Sucesso, Erro e Informação). Com a estrutura de ids (batch_id e trace_id) cada execução irá manter um vinculo para a atividade executada no fluxo
 ```
 
 ---

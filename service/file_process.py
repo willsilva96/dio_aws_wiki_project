@@ -10,15 +10,18 @@ if __name__ == "__main__":
     BUCKET_FILE_PROCESS = "dio_project_wiki_raw_processed"
     KMS_ARN_FILE_PROCESS = require_env_var("AWS_KMS_KEY_ARN_PROCESS")
     BUCKET_LOGS=("dio_project_wiki_logs")
+    BATCH_ID = f"batch-{uuid.uuid4().hex[:8]}"
 
     s3 = get_s3_connection(
         service="s3", 
-        mode=MODO)
+        mode=MODO,
+        batch_id=BATCH_ID)
 
     management_bucket(
         aws_s3_connection=s3,
         bucket_name=BUCKET_LOGS,
-        mode=MODO
+        mode=MODO,
+        trace_id=BATCH_ID
     )
 
     log = process_logger(
@@ -48,6 +51,7 @@ if __name__ == "__main__":
             log.info(
                 f"--- Process local files",
                 extra={
+                    "batch_id": BATCH_ID,
                     "trace_id": trace_id,
                     "service": "LOCAL_SCAN",
                     "level": "INFO",

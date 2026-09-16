@@ -7,6 +7,7 @@ class CloudWatchJsonFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
             "timestamp": self.formatTime(record, self.datefmt),
+            "batch_id": getattr(record, "batch_id", "N/A"),
             "trace_id": getattr(record, "trace_id", "N/A"),
             "level": record.levelname,
             "logger": record.name,
@@ -43,7 +44,7 @@ class S3MemoryLogHandler(logging.Handler):
             return False
 
         log_context = "\n".join(self.buffer)
-        today_date = datetime.now(timezone.utc).strftime("%Y=%m-%d")
+        today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         hour_now = datetime.now(timezone.utc).strftime("%H%M%S")
         s3_key = f"{self.prefix}/{today_date}/pipeline_{hour_now}.log"
 

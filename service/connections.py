@@ -54,7 +54,9 @@ def get_agent(
 
 def get_s3_connection(
         mode: ConnectionMode = "local",
-        service = None
+        service = None,
+        batch_id: Optional[str] = None,
+        trace_id: Optional[str] = None
 ):  
     try:
         region_name = require_env_var("AWS_DEFAULT_REGION")
@@ -71,8 +73,10 @@ def get_s3_connection(
 
         if mode == "local":
             log.info(
-                "Connecting to the LOCAL/FLOCI environment",
+                f"Connecting to the LOCAL/FLOCI environment ({service})",
                 extra={
+                    "batch_id": batch_id,
+                    "trace_id": trace_id,
                     "service": "AWS Local (FLOCI)",
                     "status": "SUCESS",
                     "documents": f"Region: {region_name}"
@@ -88,8 +92,10 @@ def get_s3_connection(
             )
         elif mode == "production":
             log.info(
-                "Connecting to the AWS Production environment",
+                f"Connecting to the AWS Production environment ({service})",
                 extra={
+                    "batch_id": batch_id,
+                    "trace_id": trace_id,
                     "service":"AWS Production",
                     "status": "SUCESS",
                     "document": f"Region: {region_name}"

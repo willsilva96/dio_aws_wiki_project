@@ -54,7 +54,8 @@ def get_document_bytes(file_name: str) -> bytearray:
 def create_bucket(
         aws_s3_connection, 
         bucket_name: str,
-        enable_object_lock: bool = True
+        enable_object_lock: bool = True,
+        trace_id: Optional[str] = None,
         ):
 
     if enable_object_lock:
@@ -67,14 +68,22 @@ def create_bucket(
         aws_s3_connection.create_bucket(
             Bucket=bucket_name
         )
-    
-    print(f"Bucket '{bucket_name}' sucessfully created")
+    log.info(
+        f"Bucket '{bucket_name}' sucessfully created",
+        extra={
+            "batch_id": trace_id,
+            "service": "S3",
+            "status": "SUCESS",
+            "document": bucket_name
+        }
+    )
 
 # Gestão de buckets
 def management_bucket(
         aws_s3_connection,
         bucket_name: str, 
-        mode=None):
+        mode=None,
+        trace_id: Optional[str] = None):
 
     if mode is None:
         return []
@@ -84,8 +93,17 @@ def management_bucket(
         print(f"Bucket '{bucket_name}' it already exists")
 
     except ClientError:
-        print(f"Bucket '{bucket_name} not found. Creatiing...")
-        create_bucket(aws_s3_connection, bucket_name)
+        log.info(
+                f"Bucket '{bucket_name} not found. Creatiing..",
+                    extra={
+                        "batch_id": trace_id,
+                        "service": "S3",
+                        "status": "BUCKET_NOT_FOUND",
+                        "document": bucket_name
+                    })
+        create_bucket(aws_s3_connection, 
+                    bucket_name,
+                    trace_id=trace_id)
 
     return aws_s3_connection
 
@@ -255,7 +273,7 @@ def file_to_lambda(
         trace_id: Optional[str] = None
 ) -> bool:
     from connections import get_s3_connection
-    textract_client = get_s3_connection(mode=mode, service="textract")
+    textract_client = get_s3_connection(mode=mode, service="textract",batch_id=trace_id)
     
     try:
         log.info(
@@ -338,8 +356,15 @@ def file_to_lambda(
         return True
 
     except ClientError as e:
-            print(f"[FAILED]: {e}")
-            return False
+            log.info(
+                "Client Error",
+                extra={
+                    "trace_id": trace_id,
+                    "service": "Lambda",
+                    "status": "CLIENT_ERROR",
+                    "document": e
+                }
+            )
 
 def send_logs_s3(
         aws_s3_connection,
