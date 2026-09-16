@@ -157,8 +157,12 @@ def get_s3_connection(
                 aws_secret_access_key=aws_secret_access_key
 
             )
+        
+        
         else:
             raise ValueError(f"Valid environment '{mode}'! Use 'local' or 'production'.")
+
+        
 
         return s3_client
 

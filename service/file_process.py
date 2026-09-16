@@ -2,6 +2,7 @@ import uuid
 from utils import get_document, upload_documents_kms,require_env_var, file_to_lambda, management_bucket
 from connections import get_s3_connection
 from log import process_logger
+from agents import enrich_documents
 
 if __name__ == "__main__":
     BUCKET_NAME = "dio_project_wiki_raw_data"
@@ -82,6 +83,14 @@ if __name__ == "__main__":
                         trace_id=trace_id,
                         mode=MODO
                     )
+
+        enrich_documents(
+            aws_s3_connection=s3,
+            bucket_processed=BUCKET_FILE_PROCESS,
+            skill_name="meta_data_governace",
+            mode=MODO,
+            batch_id=BATCH_ID
+        )
 
         for handler in log.handlers:
             flush_to_s3 = getattr(handler, "flush_to_s3", None)
