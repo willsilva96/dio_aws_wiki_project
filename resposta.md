@@ -254,7 +254,7 @@ Explique como os documentos seriam divididos em trechos menores e preparados par
 **Sua resposta:**
 
 ```md
-Preencha aqui.
+Com o indexer.py os arquivos .md processados de enriquecidos são quebrados em arquivos menores em um novo bucket utlizando a estrategia de tokenrização baseado em semantica mantendo um numero determinado de palavras para o proximo bloco quebrado. Com o chunk_index a rastreabilidade se mantem. 
 ```
 
 ---
