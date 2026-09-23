@@ -1,10 +1,11 @@
 import io
 import os
 import csv
+import json
 from pypdf import PdfReader
 from pathlib import Path
 from botocore.exceptions import ClientError
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from log import process_logger
@@ -178,9 +179,11 @@ def apply_object_immutability(
         )
 
         print(f"[IMMUTABILITY] File protected against deletion util {expiration_date}, Mode: {mode}")
+        return True
 
     except Exception as e:
         print(f"[IMMUTABILITY WARNING] Objetct Lock could not be applied to...")
+        return False
 
 # Cols csv files
 def format_cols_csv(col: str) -> str:
@@ -269,7 +272,7 @@ def file_to_lambda(
         bucket_destination: str,
         s3_key_destionation: str,
         file_type: str,
-        mode = None,
+        mode,
         trace_id: Optional[str] = None
 ) -> bool:
     from connections import get_s3_connection
@@ -365,6 +368,7 @@ def file_to_lambda(
                     "document": e
                 }
             )
+            return False
 
 def send_logs_s3(
         aws_s3_connection,
@@ -381,4 +385,40 @@ def send_logs_s3(
 
     print(f"[AUDIT] Log saved on S3://{bucket_logs}/{s3_key_log}")
 
-    
+def search_documents(
+        s3_client,
+        bucket_processed: str,
+        query: str
+) -> List[dict]:
+
+    respose = s3_client.list_objects_v2(
+        Bucket=bucket_processed,
+        Prefix="processed/"
+    )
+    contents = respose.get("Contents",[])
+
+    context_docs = []
+
+    for obj in contents:
+        key = obj["Key"]
+        if key.endswith(".md"):
+            doc_obj = s3_client.get_object(Bucket=bucket_processed, Key=key)
+            doc_text = doc_obj["Body"].read().decode("utf-8")
+
+            meta_key = f"{key}.metadata.json"
+            meta_info = []
+
+            try:
+                meta_obj = s3_client.get_object(Bucket=bucket_processed, Key=meta_key)
+                meta_info = json.loads(meta_obj["Body"].read().decode("utf-8"))  
+                        
+            except Exception:
+                    meta_info = {}
+
+            context_docs.append({
+                "source_file": key,
+                "text": doc_text[:3000],
+                "metadata": meta_info
+            })
+
+    return context_docs

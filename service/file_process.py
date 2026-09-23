@@ -5,10 +5,10 @@ from log import process_logger
 from agents import enrich_documents
 
 if __name__ == "__main__":
-    BUCKET_NAME = "dio_project_wiki_raw_data"
+    BUCKET_BRONZE = "dio_project_wiki_raw_data"
     MODO = "local"
     KMS_ARN = require_env_var("AWS_KMS_KEY_ARN")
-    BUCKET_FILE_PROCESS = "dio_project_wiki_raw_processed"
+    BUCKET_SILVER = "dio_project_wiki_raw_processed"
     KMS_ARN_FILE_PROCESS = require_env_var("AWS_KMS_KEY_ARN_PROCESS")
     BUCKET_LOGS=("dio_project_wiki_logs")
     BATCH_ID = f"batch-{uuid.uuid4().hex[:8]}"
@@ -18,12 +18,15 @@ if __name__ == "__main__":
         mode=MODO,
         batch_id=BATCH_ID)
 
-    management_bucket(
-        aws_s3_connection=s3,
-        bucket_name=BUCKET_LOGS,
-        mode=MODO,
-        trace_id=BATCH_ID
-    )
+    buckets_list = [BUCKET_BRONZE, BUCKET_SILVER, BUCKET_LOGS]
+
+    for bucket in buckets_list:
+        management_bucket(
+            aws_s3_connection=s3,
+            bucket_name=bucket,
+            mode=MODO,
+            trace_id=BATCH_ID
+        )
 
     log = process_logger(
         s3_client=s3,
@@ -63,7 +66,7 @@ if __name__ == "__main__":
             upload_ok = upload_documents_kms(
                 aws_s3_connection=s3,
                 file_path=file_path,
-                bucket_name=BUCKET_NAME,
+                bucket_name=BUCKET_BRONZE,
                 s3_key=s3_key,
                 kms_key_id=KMS_ARN,
                 trace_id=trace_id
@@ -75,9 +78,9 @@ if __name__ == "__main__":
 
                     file_to_lambda(
                         aws_s3_connection=s3,
-                        bucket=BUCKET_NAME,
+                        bucket=BUCKET_BRONZE,
                         s3_key=s3_key,
-                        bucket_destination=BUCKET_FILE_PROCESS,
+                        bucket_destination=BUCKET_SILVER,
                         s3_key_destionation=s3_key_md,
                         file_type=file_type,
                         trace_id=trace_id,
@@ -86,7 +89,7 @@ if __name__ == "__main__":
 
         enrich_documents(
             aws_s3_connection=s3,
-            bucket_processed=BUCKET_FILE_PROCESS,
+            bucket_processed=BUCKET_SILVER,
             skill_name="meta_data_governace",
             mode=MODO,
             batch_id=BATCH_ID
